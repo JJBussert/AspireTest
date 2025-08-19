@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsAspireServiceProject>true</IsAspireServiceProject>
+    <UserSecretsId>aspire-JJBussert.Aspire.DataService-20240819-af52-4fe3-9d00-822c2d6b7318</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Microsoft.EntityFrameworkCore.SqlServer" Version="9.4.1" />
+    <PackageReference Include="Bogus" Version="35.6.1" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\JJBussert.Aspire.Data\JJBussert.Aspire.Data.csproj" />
+    <ProjectReference Include="..\JJBussert.Aspire.Domain\JJBussert.Aspire.Domain.csproj" />
+    <ProjectReference Include="..\JJBussert.Aspire.ServiceDefaults\JJBussert.Aspire.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+</Project>
