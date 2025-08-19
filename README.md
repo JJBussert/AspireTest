@@ -21,19 +21,68 @@ A .NET Aspire application demonstrating orchestration of multiple services inclu
 
 ## Getting Started
 
-1. Clone the repository
-2. Restore dependencies:
+### Quick Start (Automated)
+
+**Linux/macOS:**
+```bash
+./run-local.sh
+```
+
+**Windows:**
+```cmd
+run-local.bat
+```
+
+### Manual Setup
+
+1. **Prerequisites:**
+   - .NET 9.0 SDK
+   - Node.js 20+
+   - Docker Desktop (running)
+
+2. **Clone and setup:**
    ```bash
+   git clone <repository-url>
+   cd AspireTest
    dotnet restore
-   cd JJBussert.Aspire.Web && npm install
+   cd JJBussert.Aspire.Web && npm install && cd ..
    ```
 
-3. Run the application:
+3. **Build and test:**
+   ```bash
+   dotnet build --configuration Release
+   dotnet test
+   ```
+
+4. **Run the application:**
    ```bash
    dotnet run --project JJBussert.Aspire.AppHost
    ```
 
-4. Access the Aspire dashboard at the URL shown in the console output
+5. **Access the application:**
+   - Aspire dashboard: URL shown in console output
+   - React app: Available through the dashboard
+   - API: Available through service discovery
+
+### Authentication Testing
+
+The application includes built-in test authentication for development:
+
+- **Admin User**: Add `?testUser=admin` to API requests
+- **Basic User**: Add `?testUser=basic` to API requests
+- **Unauthenticated**: Make requests without the testUser parameter
+
+Example API calls:
+```bash
+# Admin user (can create/update/delete)
+curl "http://localhost:5000/api/users?testUser=admin"
+
+# Basic user (read-only)
+curl "http://localhost:5000/api/users?testUser=basic"
+
+# Unauthenticated (should return 401)
+curl "http://localhost:5000/api/users"
+```
 
 ## Testing
 
@@ -51,11 +100,14 @@ npm test
 ## Features
 
 - **Service Discovery**: All services use Aspire service discovery
+- **Authentication**: SWA CLI integration with role-based authorization (Admin/Basic)
 - **Database Seeding**: Automatic creation of 10 organizations with 5-20 users each using Bogus
 - **Health Checks**: Built-in health monitoring for all services
 - **OpenTelemetry**: Distributed tracing and metrics
-- **Automated Testing**: Integration tests using Aspire.Hosting.Testing
-- **CI/CD**: GitHub Actions workflow for build, test, and deployment
+- **Automated Testing**: Comprehensive integration tests using Aspire.Hosting.Testing
+- **Role-Based Security**: Admin users can CRUD, Basic users read-only
+- **Development Auth**: Built-in test authentication for automated testing
+- **CI/CD Ready**: GitHub Actions workflow for build, test, and deployment
 
 ## Database Schema
 
@@ -84,3 +136,40 @@ The seeder creates test users for authentication testing:
 ## Development
 
 The application is designed to be fully automatable and testable via CLI without manual intervention. All services are orchestrated through Aspire with proper service discovery and health checks.
+
+### Authentication Flow
+
+1. **Development Mode**: Uses test authentication handler that creates users based on `?testUser` parameter
+2. **SWA CLI Mode**: Uses Azure Static Web Apps CLI for local authentication emulation
+3. **Production**: Integrates with Azure Static Web Apps authentication
+
+### Testing Strategy
+
+- **Unit Tests**: Individual component testing
+- **Integration Tests**: Full Aspire application testing with authentication scenarios
+- **Authentication Tests**: Admin, Basic, and Unauthorized user scenarios
+- **Health Check Tests**: Verify all services are healthy
+- **End-to-End Tests**: Complete user workflows
+
+### CI/CD Pipeline
+
+The included GitHub Actions workflow (`ci-workflow.yml`) provides:
+
+- ✅ .NET solution build and test
+- ✅ React app build and test with coverage
+- ✅ SQL Server integration testing
+- ✅ Docker image builds
+- ✅ Automated deployment (when configured)
+
+To add the workflow to your repository:
+1. Create `.github/workflows/` directory
+2. Copy `ci-workflow.yml` to `.github/workflows/ci.yml`
+3. Commit and push to trigger the pipeline
+
+### Local Development Tips
+
+- Use the provided scripts (`run-local.sh` or `run-local.bat`) for quick setup
+- Monitor the Aspire dashboard for service health and logs
+- Use `?testUser=admin` or `?testUser=basic` for API testing
+- Check Docker Desktop for SQL Server container status
+- All services auto-restart on code changes through Aspire

@@ -181,6 +181,38 @@ public class AspireAppTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    [Fact]
+    public async Task Api_AuthenticationFlow_WorksEndToEnd()
+    {
+        // Test 1: Unauthenticated request should fail
+        var unauthenticatedClient = _app!.CreateHttpClient("api");
+        var unauthResponse = await unauthenticatedClient.GetAsync("/api/users");
+        Assert.Equal(HttpStatusCode.Unauthorized, unauthResponse.StatusCode);
+
+        // Test 2: Basic user can read but not create
+        var basicResponse = await _apiClient!.GetAsync("/api/users?testUser=basic");
+        Assert.Equal(HttpStatusCode.OK, basicResponse.StatusCode);
+
+        var organizations = await GetOrganizationsAsync();
+        var newUser = new User
+        {
+            Name = "Test User",
+            Email = "testuser@example.com",
+            Role = "Basic",
+            OrganizationId = organizations.First().Id
+        };
+
+        var basicCreateResponse = await _apiClient!.PostAsJsonAsync("/api/users?testUser=basic", newUser);
+        Assert.Equal(HttpStatusCode.Forbidden, basicCreateResponse.StatusCode);
+
+        // Test 3: Admin user can read and create
+        var adminResponse = await _apiClient!.GetAsync("/api/users?testUser=admin");
+        Assert.Equal(HttpStatusCode.OK, adminResponse.StatusCode);
+
+        var adminCreateResponse = await _apiClient!.PostAsJsonAsync("/api/users?testUser=admin", newUser);
+        Assert.Equal(HttpStatusCode.Created, adminCreateResponse.StatusCode);
+    }
+
     private async Task<List<Organization>> GetOrganizationsAsync()
     {
         var response = await _apiClient!.GetAsync("/api/organizations?testUser=admin");
