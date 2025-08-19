@@ -11,11 +11,11 @@ public class OrganizationModule : ICarterModule
     {
         var group = app.MapGroup("/api/organizations").WithTags("Organizations");
 
-        group.MapGet("/", GetOrganizations);
-        group.MapGet("/{id:int}", GetOrganization);
-        group.MapPost("/", CreateOrganization);
-        group.MapPut("/{id:int}", UpdateOrganization);
-        group.MapDelete("/{id:int}", DeleteOrganization);
+        group.MapGet("/", GetOrganizations).RequireAuthorization("AuthenticatedUser");
+        group.MapGet("/{id:int}", GetOrganization).RequireAuthorization("AuthenticatedUser");
+        group.MapPost("/", CreateOrganization).RequireAuthorization("AdminOnly");
+        group.MapPut("/{id:int}", UpdateOrganization).RequireAuthorization("AdminOnly");
+        group.MapDelete("/{id:int}", DeleteOrganization).RequireAuthorization("AdminOnly");
     }
 
     private static async Task<IResult> GetOrganizations(AspireDbContext context)

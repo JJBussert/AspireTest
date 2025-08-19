@@ -11,11 +11,11 @@ public class UserModule : ICarterModule
     {
         var group = app.MapGroup("/api/users").WithTags("Users");
 
-        group.MapGet("/", GetUsers);
-        group.MapGet("/{id:int}", GetUser);
-        group.MapPost("/", CreateUser);
-        group.MapPut("/{id:int}", UpdateUser);
-        group.MapDelete("/{id:int}", DeleteUser);
+        group.MapGet("/", GetUsers).RequireAuthorization("AuthenticatedUser");
+        group.MapGet("/{id:int}", GetUser).RequireAuthorization("AuthenticatedUser");
+        group.MapPost("/", CreateUser).RequireAuthorization("AdminOnly");
+        group.MapPut("/{id:int}", UpdateUser).RequireAuthorization("AdminOnly");
+        group.MapDelete("/{id:int}", DeleteUser).RequireAuthorization("AdminOnly");
     }
 
     private static async Task<IResult> GetUsers(AspireDbContext context)

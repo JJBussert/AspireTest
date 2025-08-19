@@ -16,11 +16,12 @@ var dataService = builder.AddProject<Projects.JJBussert_Aspire_DataService>("dat
     .WithReference(database)
     .WaitFor(database);
 
-// Add the React frontend using NPM
-var web = builder.AddNpmApp("web", "../JJBussert.Aspire.Web")
+// Add the React frontend using NPM with SWA CLI for local auth emulation
+var web = builder.AddNpmApp("web", "../JJBussert.Aspire.Web", "swa:start")
     .WithReference(api)
     .WithHttpEndpoint(env: "PORT")
     .WithExternalHttpEndpoints()
+    .WithEnvironment("REACT_APP_API_URL", api.GetEndpoint("http"))
     .PublishAsDockerFile();
 
 builder.Build().Run();

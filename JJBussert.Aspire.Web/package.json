@@ -16,11 +16,16 @@
     "typescript": "^5.7.2",
     "web-vitals": "^4.2.4"
   },
+  "devDependencies": {
+    "@azure/static-web-apps-cli": "^2.0.1"
+  },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "swa:start": "swa start",
+    "swa:build": "npm run build && swa start build --api-location http://localhost:5000"
   },
   "eslintConfig": {
     "extends": [

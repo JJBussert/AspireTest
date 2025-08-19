@@ -1,4 +1,5 @@
 using Carter;
+using JJBussert.Aspire.Api.Authentication;
 using JJBussert.Aspire.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -28,6 +29,17 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Add authentication services
+builder.Services.AddAuthentication("StaticWebApps")
+    .AddScheme<StaticWebAppsAuthenticationSchemeOptions, StaticWebAppsAuthenticationHandler>(
+        "StaticWebApps", options => { });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
+    options.AddPolicy("AuthenticatedUser", policy => policy.RequireAuthenticatedUser());
+});
+
 var app = builder.Build();
 
 // Map Aspire service defaults
@@ -42,6 +54,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors();
+
+// Add authentication middleware
+app.UseAuthentication();
+app.UseAuthorization();
 
 // Map Carter routes
 app.MapCarter();
