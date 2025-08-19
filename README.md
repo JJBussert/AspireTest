@@ -86,15 +86,43 @@ curl "http://localhost:5000/api/users"
 
 ## Testing
 
-Run all tests:
-```bash
-dotnet test
-```
+### Unit & Integration Tests
 
-Run React tests:
 ```bash
+# Run all .NET tests
+dotnet test
+
+# Run React tests
 cd JJBussert.Aspire.Web
 npm test
+
+# Run tests with coverage
+dotnet test --collect:"XPlat Code Coverage"
+```
+
+### Deployment Testing
+
+Test the entire deployed application:
+
+```bash
+# Linux/macOS
+./test-deployment.sh
+
+# Windows
+test-deployment.bat
+```
+
+### Docker Compose Testing
+
+```bash
+# Start all services
+docker-compose up -d
+
+# Run deployment tests
+./test-deployment.sh
+
+# Stop all services
+docker-compose down
 ```
 
 ## Features
@@ -166,6 +194,31 @@ To add the workflow to your repository:
 2. Copy `ci-workflow.yml` to `.github/workflows/ci.yml`
 3. Commit and push to trigger the pipeline
 
+## 🚀 Deployment
+
+### Docker Compose (Recommended for Local/Testing)
+
+```bash
+# Start all services
+docker-compose up -d
+
+# Test deployment
+./test-deployment.sh  # Linux/macOS
+test-deployment.bat   # Windows
+
+# Stop services
+docker-compose down
+```
+
+### Azure Container Apps
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed deployment instructions including:
+- Azure Container Apps deployment
+- Kubernetes deployment
+- Production configuration
+- Security considerations
+- Monitoring setup
+
 ### Local Development Tips
 
 - Use the provided scripts (`run-local.sh` or `run-local.bat`) for quick setup
@@ -173,3 +226,4 @@ To add the workflow to your repository:
 - Use `?testUser=admin` or `?testUser=basic` for API testing
 - Check Docker Desktop for SQL Server container status
 - All services auto-restart on code changes through Aspire
+- Use `test-deployment.sh` to validate your local setup

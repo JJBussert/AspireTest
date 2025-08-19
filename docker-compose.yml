@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  # SQL Server Database
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: aspire-sqlserver
+    environment:
+      SA_PASSWORD: "YourStrong@Passw0rd"
+      ACCEPT_EULA: "Y"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqldata:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P YourStrong@Passw0rd -Q 'SELECT 1'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - aspire-network
+
+  # API Service
+  api:
+    build:
+      context: .
+      dockerfile: JJBussert.Aspire.Api/Dockerfile
+    container_name: aspire-api
+    ports:
+      - "5000:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__aspiredb=Server=sqlserver,1433;Database=AspireDb;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=true;
+      - ASPNETCORE_URLS=http://+:8080
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - aspire-network
+
+  # Data Service (Background Worker)
+  dataservice:
+    build:
+      context: .
+      dockerfile: JJBussert.Aspire.DataService/Dockerfile
+    container_name: aspire-dataservice
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    environment:
+      - DOTNET_ENVIRONMENT=Production
+      - ConnectionStrings__aspiredb=Server=sqlserver,1433;Database=AspireDb;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=true;
+    networks:
+      - aspire-network
+
+  # React Web Application
+  web:
+    build:
+      context: ./JJBussert.Aspire.Web
+      dockerfile: Dockerfile
+    container_name: aspire-web
+    ports:
+      - "3000:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      - REACT_APP_API_URL=http://localhost:5000
+    networks:
+      - aspire-network
+
+volumes:
+  sqldata:
+    driver: local
+
+networks:
+  aspire-network:
+    driver: bridge
