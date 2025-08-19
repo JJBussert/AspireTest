@@ -112,17 +112,15 @@ Test the entire deployed application:
 test-deployment.bat
 ```
 
-### Docker Compose Testing
+### Aspire Integration Testing
 
 ```bash
-# Start all services
-docker-compose up -d
+# Run all tests (includes Aspire orchestration tests)
+dotnet test
 
-# Run deployment tests
-./test-deployment.sh
-
-# Stop all services
-docker-compose down
+# Run specific test categories
+dotnet test --filter "Category=Authentication"
+dotnet test --filter "Category=DataSeeding"
 ```
 
 ## Features
@@ -196,25 +194,24 @@ To add the workflow to your repository:
 
 ## 🚀 Deployment
 
-### Docker Compose (Recommended for Local/Testing)
+### Aspire Orchestration (Recommended)
+
+Aspire handles all service orchestration automatically:
 
 ```bash
-# Start all services
-docker-compose up -d
+# Development
+dotnet run --project JJBussert.Aspire.AppHost
 
-# Test deployment
-./test-deployment.sh  # Linux/macOS
-test-deployment.bat   # Windows
-
-# Stop services
-docker-compose down
+# Production deployment to Azure
+azd init
+azd up
 ```
 
-### Azure Container Apps
+### Production Deployment
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed deployment instructions including:
-- Azure Container Apps deployment
-- Kubernetes deployment
+- Azure Container Apps with Aspire
+- Kubernetes deployment with Aspire manifests
 - Production configuration
 - Security considerations
 - Monitoring setup

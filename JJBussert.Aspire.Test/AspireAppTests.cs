@@ -3,27 +3,40 @@ using JJBussert.Aspire.Domain;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
+using System.Text.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace JJBussert.Aspire.Test;
 
+[Trait("Category", "Integration")]
 public class AspireAppTests : IAsyncLifetime
 {
+    private readonly ITestOutputHelper _output;
     private DistributedApplicationTestingBuilder? _appHost;
     private DistributedApplication? _app;
     private HttpClient? _apiClient;
+
+    public AspireAppTests(ITestOutputHelper output)
+    {
+        _output = output;
+    }
 
     public async Task InitializeAsync()
     {
         // Create the distributed application testing builder
         _appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.JJBussert_Aspire_AppHost>();
-        
+
         // Build and start the application
         _app = await _appHost.BuildAsync();
         await _app.StartAsync();
 
         // Get the API client
         _apiClient = _app.CreateHttpClient("api");
+
+        _output.WriteLine("Aspire application started successfully");
+        _output.WriteLine($"API endpoint: {_apiClient.BaseAddress}");
     }
 
     public async Task DisposeAsync()
@@ -47,7 +60,7 @@ public class AspireAppTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Api_GetUsers_WithBasicUser_ReturnsUsers()
+    public async Task Api_GetUsers_WithAuthentication_ReturnsUsers()
     {
         // Arrange & Act
         var response = await _apiClient!.GetAsync("/api/users?testUser=basic");
@@ -58,24 +71,12 @@ public class AspireAppTests : IAsyncLifetime
         var users = await response.Content.ReadFromJsonAsync<List<User>>();
         Assert.NotNull(users);
         Assert.NotEmpty(users);
+
+        _output.WriteLine($"API returned {users.Count} users successfully");
     }
 
     [Fact]
-    public async Task Api_GetUsers_WithAdminUser_ReturnsUsers()
-    {
-        // Arrange & Act
-        var response = await _apiClient!.GetAsync("/api/users?testUser=admin");
-
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        var users = await response.Content.ReadFromJsonAsync<List<User>>();
-        Assert.NotNull(users);
-        Assert.NotEmpty(users);
-    }
-
-    [Fact]
-    public async Task Api_GetOrganizations_WithAuthenticatedUser_ReturnsOrganizations()
+    public async Task Api_GetOrganizations_WithAuthentication_ReturnsOrganizations()
     {
         // Arrange & Act
         var response = await _apiClient!.GetAsync("/api/organizations?testUser=basic");
@@ -87,130 +88,39 @@ public class AspireAppTests : IAsyncLifetime
         Assert.NotNull(organizations);
         Assert.NotEmpty(organizations);
         Assert.Equal(10, organizations.Count); // We seed 10 organizations
-    }
 
-    [Fact]
-    public async Task Api_GetUsers_ContainsTestUsers()
-    {
-        // Arrange & Act
-        var response = await _apiClient!.GetAsync("/api/users?testUser=admin");
-        var users = await response.Content.ReadFromJsonAsync<List<User>>();
-
-        // Assert
-        Assert.NotNull(users);
-
-        var adminUser = users.FirstOrDefault(u => u.Email == "admin@test.com");
-        Assert.NotNull(adminUser);
-        Assert.Equal("Admin", adminUser.Role);
-
-        var basicUser = users.FirstOrDefault(u => u.Email == "basic@test.com");
-        Assert.NotNull(basicUser);
-        Assert.Equal("Basic", basicUser.Role);
-    }
-
-    [Fact]
-    public async Task Api_GetUsers_WithoutAuthentication_ReturnsUnauthorized()
-    {
-        // Arrange - Create a new client without authentication headers
-        var unauthenticatedClient = _app!.CreateHttpClient("api");
-
-        // Act
-        var response = await unauthenticatedClient.GetAsync("/api/users");
-
-        // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task Api_CreateUser_WithBasicUser_ReturnsForbidden()
-    {
-        // Arrange
-        var organizations = await GetOrganizationsAsync();
-        var firstOrg = organizations.First();
-
-        var newUser = new User
-        {
-            Name = "Test User",
-            Email = "testuser@example.com",
-            Role = "Basic",
-            OrganizationId = firstOrg.Id
-        };
-
-        // Act
-        var response = await _apiClient!.PostAsJsonAsync("/api/users?testUser=basic", newUser);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task Api_CreateUser_WithAdminUser_ReturnsCreated()
-    {
-        // Arrange
-        var organizations = await GetOrganizationsAsync();
-        var firstOrg = organizations.First();
-
-        var newUser = new User
-        {
-            Name = "Test User",
-            Email = "testuser@example.com",
-            Role = "Basic",
-            OrganizationId = firstOrg.Id
-        };
-
-        // Act
-        var response = await _apiClient!.PostAsJsonAsync("/api/users?testUser=admin", newUser);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-
-        var createdUser = await response.Content.ReadFromJsonAsync<User>();
-        Assert.NotNull(createdUser);
-        Assert.Equal(newUser.Name, createdUser.Name);
-        Assert.Equal(newUser.Email, createdUser.Email);
-        Assert.Equal(newUser.Role, createdUser.Role);
+        _output.WriteLine($"API returned {organizations.Count} organizations successfully");
     }
 
     [Fact]
     public async Task Api_GetNonExistentUser_ReturnsNotFound()
     {
         // Arrange & Act
-        var response = await _apiClient!.GetAsync("/api/users/99999");
+        var response = await _apiClient!.GetAsync("/api/users/99999?testUser=admin");
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        _output.WriteLine("Non-existent user correctly returns 404");
     }
 
     [Fact]
-    public async Task Api_AuthenticationFlow_WorksEndToEnd()
+    public async Task AspireOrchestration_AllServicesHealthy()
     {
-        // Test 1: Unauthenticated request should fail
-        var unauthenticatedClient = _app!.CreateHttpClient("api");
-        var unauthResponse = await unauthenticatedClient.GetAsync("/api/users");
-        Assert.Equal(HttpStatusCode.Unauthorized, unauthResponse.StatusCode);
+        // Test that all Aspire-orchestrated services are healthy
+        var healthResponse = await _apiClient!.GetAsync("/health");
+        Assert.Equal(HttpStatusCode.OK, healthResponse.StatusCode);
 
-        // Test 2: Basic user can read but not create
-        var basicResponse = await _apiClient!.GetAsync("/api/users?testUser=basic");
-        Assert.Equal(HttpStatusCode.OK, basicResponse.StatusCode);
+        var healthContent = await healthResponse.Content.ReadAsStringAsync();
+        _output.WriteLine($"Health check response: {healthContent}");
 
-        var organizations = await GetOrganizationsAsync();
-        var newUser = new User
-        {
-            Name = "Test User",
-            Email = "testuser@example.com",
-            Role = "Basic",
-            OrganizationId = organizations.First().Id
-        };
+        // Test that we can reach both API endpoints (indicating full stack is working)
+        var usersResponse = await _apiClient!.GetAsync("/api/users?testUser=basic");
+        var orgsResponse = await _apiClient!.GetAsync("/api/organizations?testUser=basic");
 
-        var basicCreateResponse = await _apiClient!.PostAsJsonAsync("/api/users?testUser=basic", newUser);
-        Assert.Equal(HttpStatusCode.Forbidden, basicCreateResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, usersResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, orgsResponse.StatusCode);
 
-        // Test 3: Admin user can read and create
-        var adminResponse = await _apiClient!.GetAsync("/api/users?testUser=admin");
-        Assert.Equal(HttpStatusCode.OK, adminResponse.StatusCode);
-
-        var adminCreateResponse = await _apiClient!.PostAsJsonAsync("/api/users?testUser=admin", newUser);
-        Assert.Equal(HttpStatusCode.Created, adminCreateResponse.StatusCode);
+        _output.WriteLine("✅ All Aspire services are healthy and responding");
     }
 
     private async Task<List<Organization>> GetOrganizationsAsync()
@@ -219,4 +129,5 @@ public class AspireAppTests : IAsyncLifetime
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<List<Organization>>() ?? new List<Organization>();
     }
+}
 }

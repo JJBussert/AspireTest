@@ -57,145 +57,79 @@ services:
     host: containerapp
 ```
 
-### 2. Docker Compose
+### 2. Local Development with Aspire
 
-For local or on-premises deployment.
-
-#### Create docker-compose.yml
-
-```yaml
-version: '3.8'
-services:
-  sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    environment:
-      SA_PASSWORD: "YourStrong@Passw0rd"
-      ACCEPT_EULA: "Y"
-    ports:
-      - "1433:1433"
-    volumes:
-      - sqldata:/var/opt/mssql
-
-  api:
-    build:
-      context: .
-      dockerfile: JJBussert.Aspire.Api/Dockerfile
-    ports:
-      - "5000:8080"
-    depends_on:
-      - sqlserver
-    environment:
-      - ConnectionStrings__aspiredb=Server=sqlserver,1433;Database=AspireDb;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=true;
-
-  dataservice:
-    build:
-      context: .
-      dockerfile: JJBussert.Aspire.DataService/Dockerfile
-    depends_on:
-      - sqlserver
-    environment:
-      - ConnectionStrings__aspiredb=Server=sqlserver,1433;Database=AspireDb;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=true;
-
-  web:
-    build:
-      context: ./JJBussert.Aspire.Web
-      dockerfile: Dockerfile
-    ports:
-      - "3000:80"
-    depends_on:
-      - api
-    environment:
-      - REACT_APP_API_URL=http://localhost:5000
-
-volumes:
-  sqldata:
-```
-
-#### Deploy with Docker Compose
-
-```bash
-docker-compose up -d
-```
-
-### 3. Kubernetes
-
-For production Kubernetes deployment.
+For local development, Aspire handles all orchestration automatically.
 
 #### Prerequisites
-- Kubernetes cluster
-- kubectl configured
-- Helm (optional)
+- .NET 9.0 SDK
+- Node.js 20+
+- Docker Desktop (for SQL Server container)
 
-#### Create Kubernetes Manifests
-
-1. **Namespace**
-   ```yaml
-   apiVersion: v1
-   kind: Namespace
-   metadata:
-     name: jjbussert-aspire
-   ```
-
-2. **SQL Server Deployment**
-   ```yaml
-   apiVersion: apps/v1
-   kind: Deployment
-   metadata:
-     name: sqlserver
-     namespace: jjbussert-aspire
-   spec:
-     replicas: 1
-     selector:
-       matchLabels:
-         app: sqlserver
-     template:
-       metadata:
-         labels:
-           app: sqlserver
-       spec:
-         containers:
-         - name: sqlserver
-           image: mcr.microsoft.com/mssql/server:2022-latest
-           env:
-           - name: SA_PASSWORD
-             value: "YourStrong@Passw0rd"
-           - name: ACCEPT_EULA
-             value: "Y"
-           ports:
-           - containerPort: 1433
-   ```
-
-3. **API Deployment**
-   ```yaml
-   apiVersion: apps/v1
-   kind: Deployment
-   metadata:
-     name: api
-     namespace: jjbussert-aspire
-   spec:
-     replicas: 2
-     selector:
-       matchLabels:
-         app: api
-     template:
-       metadata:
-         labels:
-           app: api
-       spec:
-         containers:
-         - name: api
-           image: your-registry/aspire-api:latest
-           ports:
-           - containerPort: 8080
-           env:
-           - name: ConnectionStrings__aspiredb
-             value: "Server=sqlserver,1433;Database=AspireDb;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=true;"
-   ```
-
-#### Deploy to Kubernetes
+#### Quick Start
 
 ```bash
-kubectl apply -f k8s/
+# Automated setup
+./run-local.sh  # Linux/macOS
+run-local.bat   # Windows
+
+# Manual setup
+dotnet restore
+cd JJBussert.Aspire.Web && npm install && cd ..
+dotnet run --project JJBussert.Aspire.AppHost
+```
+
+#### What Aspire Orchestrates
+
+- **SQL Server Container**: Automatically started with persistent storage
+- **API Service**: .NET minimal API with Carter
+- **Web Application**: React app with NPM/SWA CLI
+- **DataService**: Background worker for database seeding
+- **Service Discovery**: All services communicate via Aspire service discovery
+
+### 3. Production Deployment
+
+For production deployment, use Azure Container Apps with Aspire's built-in deployment support.
+
+#### Azure Container Apps with Aspire
+
+Aspire provides first-class support for Azure Container Apps deployment:
+
+```bash
+# Install Azure Developer CLI
+azd init
+azd auth login
+azd up
+```
+
+#### Manual Container Deployment
+
+If you need custom container deployment:
+
+1. **Build container images**:
+   ```bash
+   # API
+   dotnet publish JJBussert.Aspire.Api -c Release
+
+   # DataService
+   dotnet publish JJBussert.Aspire.DataService -c Release
+
+   # Web (build React app)
+   cd JJBussert.Aspire.Web
+   npm run build
+   ```
+
+2. **Deploy to your container platform** (Azure Container Apps, AWS ECS, etc.)
+
+#### Kubernetes with Aspire Manifest
+
+Aspire can generate Kubernetes manifests:
+
+```bash
+# Generate manifest
+dotnet run --project JJBussert.Aspire.AppHost -- --publisher manifest --output-path ./aspire-manifest.json
+
+# Use the manifest with your Kubernetes deployment tools
 ```
 
 ## 🔧 Environment Configuration
